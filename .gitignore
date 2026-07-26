@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# PlatformIO
+.pio/
+**/.pio/
+.vscode/
+**/.vscode/
+
+# Python
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Local configuration and credentials
+.env
+**/.env
+!**/.env.example
+secrets.h
+**/secrets.h
+!**/secrets.example.h
+
+# Generated output
+*.log
+
