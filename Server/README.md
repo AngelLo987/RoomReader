@@ -64,11 +64,4 @@ curl -X POST http://localhost:8000/readings \
 The server temporarily stores readings in a Python list. Restarting the server
 clears the list.
 
-## Suggested Learning Order
 
-1. Decide which JSON fields the ESP32 should send.
-2. Add those fields to `ReadingJSON`.
-3. Test uploads through `/docs`.
-4. Add validation rules.
-5. Add a device token.
-6. Replace the temporary list with PostgreSQL.
