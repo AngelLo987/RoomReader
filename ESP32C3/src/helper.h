@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <time.h>
 
 template <typename T>
 double getAverage(const std::vector<T>& values) {
@@ -19,6 +20,7 @@ double getAverage(const std::vector<T>& values) {
 
 int sendReading(
     const char* device_id,
+    time_t recorded_at,
     double avgPMS1_0,
     double avgPMS2_5,
     double avgPMS10_0,

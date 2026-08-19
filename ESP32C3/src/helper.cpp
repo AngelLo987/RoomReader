@@ -7,8 +7,11 @@
 
 #include <cmath>
 
+constexpr char firmwareVersion[] = "0.1.0";
+
 int sendReading(
     const char* device_id,
+    time_t recorded_at,
     double avgPMS1_0,
     double avgPMS2_5,
     double avgPMS10_0,
@@ -25,9 +28,21 @@ int sendReading(
     }
 
     String fullURL = String(baseURL) + endpoint;
+    struct tm utcTime;
+    gmtime_r(&recorded_at, &utcTime);
+
+    char recordedAtText[25];
+
+    strftime(
+        recordedAtText,
+        sizeof(recordedAtText),
+        "%Y-%m-%dT%H:%M:%SZ",
+        &utcTime
+    );
 
     JsonDocument json;
     json["device_id"] = device_id;
+    json["recorded_at"] = recordedAtText;
     json["pm1_0"] = avgPMS1_0;
     json["pm2_5"] = avgPMS2_5;
     json["pm10_0"] = avgPMS10_0;
@@ -36,6 +51,9 @@ int sendReading(
     json["rh_percent"] = avgHumid;
     json["voc_index"] = std::lround(avgVOC);
     json["nox_index"] = std::lround(avgNOX);
+    json["wifi_rssi"] = WiFi.RSSI();
+    json["uptime_seconds"] = millis() / 1000;
+    json["firmware_version"] = firmwareVersion;
 
     String payload;
     serializeJson(json, payload);

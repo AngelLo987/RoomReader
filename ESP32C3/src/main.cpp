@@ -72,7 +72,7 @@ void loop() {
   //Reading PMS5003 data
   PMSdata pmsData;
   if (pmsRead(pmsData)){
-    Serial.print("PM1.0 ");
+    Serial.print("PM1.0: ");
     Serial.println(pmsData.pm1_0);
     Serial.print("PM2.5: ");
     Serial.println(pmsData.pm2_5);
@@ -137,7 +137,19 @@ void loop() {
       double avgTemp = getAverage(tempData);
       double avgHumid = getAverage(humidData);
 
-      int code = sendReading(deviceid, avgPMS1_0, avgPMS2_5,avgPMS10_0,avgNOX,avgVOC,avgCO2,avgTemp, avgHumid, "/readings");
+      time_t recordedAt = time(nullptr);
+      int code = sendReading(
+        deviceid,
+        recordedAt,
+        avgPMS1_0,
+        avgPMS2_5,
+        avgPMS10_0,
+        avgNOX,
+        avgVOC,
+        avgCO2,
+        avgTemp,
+        avgHumid,
+        "/readings");
       if (code == 201){
         Serial.write("120s reading sent successfully");
         lastAveraged = myTZ.now();

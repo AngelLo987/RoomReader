@@ -13,6 +13,7 @@ const int SCLpin = 6;
 const int SDApin = 7;
 constexpr size_t frameLength = 6; //6 byte frames 
 const int I2Caddress = 0x59; 
+constexpr bool debugSgp41 = false;
 
 //frame indexes for SGP41 structs 
 const int CO2Index = 0; 
@@ -91,13 +92,22 @@ boolean sgpRead(SGP41data &data, float latestTemp, float latestHumidty){
     Wire.write(temp_bytes[1]);
     Wire.write(generateCRC(temp_bytes.data(), 2));
 
-    Wire.endTransmission();
+    uint8_t txStatus = Wire.endTransmission();
+    if (txStatus != 0) {
+        Serial.print("SGP41 I2C write failed. endTransmission status: ");
+        Serial.println(txStatus);
+        return false;
+    }
 
     delay(50);
 
     //Get the 6 bytes back
-    Wire.requestFrom(I2Caddress, frameLength);
-    if (Wire.available() < frameLength){
+    uint8_t bytesRead = Wire.requestFrom((uint8_t)I2Caddress, (uint8_t)frameLength);
+    if (bytesRead != frameLength || Wire.available() < frameLength){
+        Serial.print("SGP41 I2C read failed. bytesRead: ");
+        Serial.print(bytesRead);
+        Serial.print(" available: ");
+        Serial.println(Wire.available());
         return false;
     }
 
@@ -106,10 +116,43 @@ boolean sgpRead(SGP41data &data, float latestTemp, float latestHumidty){
         rxData[i] = Wire.read(); 
     }
 
+    uint8_t vocCrc = generateCRC(rxData.data(), 2);
+    uint8_t noxCrc = generateCRC(rxData.data() + 3, 2);
+    if (vocCrc != rxData[2] || noxCrc != rxData[5]) {
+        Serial.print("SGP41 CRC failed. VOC expected/read: ");
+        Serial.print(vocCrc);
+        Serial.print("/");
+        Serial.print(rxData[2]);
+        Serial.print(" NOx expected/read: ");
+        Serial.print(noxCrc);
+        Serial.print("/");
+        Serial.println(rxData[5]);
+        return false;
+    }
+
     uint16_t srawVoc = combineBytes(rxData.data(), 0);
     uint16_t srawNox = combineBytes(rxData.data(), 3);
 
+    data.srawVoc = srawVoc;
+    data.srawNox = srawNox;
     data.vocIndex = vocIndex(srawVoc);
     data.no2Index = noxIndex(srawNox);
+
+    if (debugSgp41) {
+        Serial.print("SGP41 raw VOC: ");
+        Serial.print(data.srawVoc);
+        Serial.print(" raw NOx: ");
+        Serial.print(data.srawNox);
+        Serial.print(" VOC index: ");
+        Serial.print(data.vocIndex);
+        Serial.print(" NOx index: ");
+        Serial.print(data.no2Index);
+        Serial.print(" T/H comp: ");
+        Serial.print(latestTemp);
+        Serial.print("C ");
+        Serial.print(latestHumidty);
+        Serial.println("%");
+    }
+
     return true;
 }
