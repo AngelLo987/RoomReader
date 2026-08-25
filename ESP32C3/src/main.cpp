@@ -24,8 +24,8 @@ std::vector<float> vocData;
 std::vector<uint16_t> co2Data;
 std::vector<float> tempData;
 std::vector<float> humidData;
-  //Keep track of time
-time_t lastAveraged = myTZ.now();
+  //Initialized in setup() after the ESP32 clock has synchronized.
+time_t lastAveraged;
 
 
 //for the SGP41 to input and get readings
@@ -33,8 +33,8 @@ float latestTemp = 25.0;
 float latestHumidty = 50.0;
 
 //to make sure that the ESP32 calls on sensors properly for readings
-time_t lastReadSCD40 = myTZ.now();
-time_t lastReadSGP41 = myTZ.now();
+time_t lastReadSCD40;
+time_t lastReadSGP41;
 //Wifi and ezTime data
 const char* location = "America/Los_Angeles";
 
@@ -56,9 +56,21 @@ void setup() {
   Serial.println("connected to wifi");
 
   //Initializing Timezone
-  waitForSync();
-  myTZ.setLocation(F(location));
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.print("Setting clock");
+  while (time(nullptr) < 1700000000) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  myTZ.setLocation(location);
   myTZ.setDefault();
+
+  lastAveraged = myTZ.now();
+  lastReadSCD40 = myTZ.now();
+  lastReadSGP41 = myTZ.now();
+
+  Serial.println("Clock set");
 
   //Initialize all of the sernsors
   pmsInit(); //PMS5003
@@ -165,7 +177,7 @@ void loop() {
       else{
         Serial.write("120s reading set unsuccessfully");
       }
-
+      lastAveraged = myTZ.now();
 
   }
 

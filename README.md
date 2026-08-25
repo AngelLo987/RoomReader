@@ -78,19 +78,21 @@ The firmware requires PlatformIO and an ESP32-C3 development board.
 
 ## Backend Setup
 
-The current backend is a simple FastAPI learning template that stores readings
-temporarily in memory.
+The FastAPI backend is packaged as a Docker Compose service for home servers,
+including ARM64 devices such as the Jetson Orin Nano. It automatically restarts,
+has an internal health check, and exposes a configurable host port.
 
 ```bash
 cd Server
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+cp .env.example .env
+docker compose up -d --build
 ```
 
 The API is available at `http://localhost:8000`, with interactive documentation
 at `http://localhost:8000/docs`.
+
+See [`Server/README.md`](Server/README.md) for deployment, configuration,
+updates, logs, and manual development instructions.
 
 Current endpoints include:
 

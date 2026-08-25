@@ -1,88 +1,104 @@
 # RoomReader Server
 
-This is a deliberately small FastAPI template for learning how the ESP32 can
-send JSON to a server.
+The RoomReader API accepts environmental readings from an ESP32 and makes them
+available over HTTP. Docker Compose is the recommended deployment method for a
+Jetson, mini PC, NAS, or other always-on home server. The official Python base
+image supports both 64-bit Intel/AMD and ARM systems.
 
-The complete server is in `app/main.py`. It currently keeps readings in memory
-while the request flow is being built. PostgreSQL, authentication, Docker, and
-separate route files can be added later after the basic API shape is clear.
+> Readings are currently held in memory. Restarting or upgrading the container
+> clears them. Persistent database storage is planned.
 
-## Run the Server
+## Home-server deployment
+
+Install Git and Docker with the Compose plugin, then clone the repository:
 
 ```bash
-cd /Users/angellou/RoomReader/Server
+git clone https://github.com/AngelLo987/RoomReader.git
+cd RoomReader/Server
+cp .env.example .env
+docker compose up -d --build
+```
+
+Verify the API:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+Point the ESP32 `baseURL` setting at the home server's LAN address, for example:
+
+```cpp
+constexpr char baseURL[] = "http://10.0.0.171:8000";
+```
+
+The Compose service starts automatically after Docker restarts and is restarted
+if it exits unexpectedly. It also includes an internal health check and runs as
+an unprivileged user.
+
+## Configuration
+
+To use a different host port, edit `.env` before starting the service:
+
+```dotenv
+ROOMREADER_PORT=8080
+```
+
+The ESP32 URL would then end in `:8080`.
+
+## Operations
+
+Check service health and status:
+
+```bash
+docker compose ps
+curl http://localhost:8000/health
+```
+
+Follow server logs:
+
+```bash
+docker compose logs -f roomreader-api
+```
+
+Restart or stop the service:
+
+```bash
+docker compose restart
+docker compose down
+```
+
+Update after new code is pushed to GitHub:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+## API URLs
+
+- Documentation: `http://SERVER_IP:8000/docs`
+- Health: `http://SERVER_IP:8000/health`
+- All readings: `http://SERVER_IP:8000/readings`
+- Latest reading: `http://SERVER_IP:8000/readings/latest`
+
+Get the latest reading from PowerShell:
+
+```powershell
+Invoke-RestMethod http://SERVER_IP:8000/readings/latest | Format-List
+```
+
+## Manual development setup
+
+Docker is not required for local development:
+
+```bash
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m uvicorn app.main:app --reload
 ```
-
-## URLs
-
-- API docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/health
-- Stored readings: http://localhost:8000/readings
-- Latest reading: http://localhost:8000/readings/latest
-
-## Edit the Accepted JSON
-
-Open `app/main.py` and find:
-
-```python
-class ReadingJSON(BaseModel):
-    device_id: str
-    recorded_at: datetime | None = None
-    pm1_0: float | None = None
-    pm2_5: float | None = None
-    pm10_0: float | None = None
-    co2: int | None = None
-    temp_c: float | None = None
-    rh_percent: float | None = None
-    voc_index: int | None = None
-    nox_index: int | None = None
-    wifi_rssi: int | None = None
-    uptime_seconds: int | None = None
-    firmware_version: str | None = None
-```
-
-`device_id` is required. Most sensor fields are optional so the ESP32 can still
-send a partial reading if one sensor is unavailable. The model also validates
-reasonable ranges, such as humidity from 0 to 100 and VOC/NOx index values from
-0 to 500.
-
-The server adds:
-
-- `id`: a temporary reading number.
-- `received_at`: when the API accepted the reading.
-- `recorded_at`: filled in by the server if the ESP32 does not send it.
-
-## Try an Upload
-
-```bash
-curl -X POST http://localhost:8000/readings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "device_id": "roomreader-001",
-    "pm1_0": 4.0,
-    "pm2_5": 7.0,
-    "pm10_0": 10.0,
-    "co2": 615,
-    "temp_c": 24.8,
-    "rh_percent": 48.2,
-    "voc_index": 92,
-    "nox_index": 1,
-    "wifi_rssi": -58,
-    "uptime_seconds": 4302,
-    "firmware_version": "0.1.0"
-  }'
-```
-
-Read back the latest reading:
-
-```bash
-curl "http://localhost:8000/readings/latest?device_id=roomreader-001"
-```
-
-The server temporarily stores readings in a Python list. Restarting the server
-clears the list.
-
