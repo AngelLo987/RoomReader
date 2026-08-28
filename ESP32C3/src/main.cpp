@@ -12,7 +12,7 @@
 Timezone myTZ;
 
 //Arrays needed to keep track of values to average over 120 seconds
-int uploadInterval = 120; //120 seconds
+constexpr int uploadInterval = 120; // 120 seconds
   //PMS5003//
 std::vector<uint16_t> PMS1_0Data;
 std::vector<uint16_t> PMS2_5Data;
@@ -30,13 +30,13 @@ time_t lastAveraged;
 
 //for the SGP41 to input and get readings
 float latestTemp = 25.0;
-float latestHumidty = 50.0;
+float latestHumidity = 50.0;
 
 //to make sure that the ESP32 calls on sensors properly for readings
 time_t lastReadSCD40;
 time_t lastReadSGP41;
 //Wifi and ezTime data
-const char* location = "America/Los_Angeles";
+constexpr char location[] = "America/Los_Angeles";
 
 
 
@@ -72,7 +72,7 @@ void setup() {
 
   Serial.println("Clock set");
 
-  //Initialize all of the sernsors
+  // Initialize all of the sensors
   pmsInit(); //PMS5003
   scd40Init(); //SCD40 sensor
   sgpInit(); //SGP41 sensor
@@ -99,6 +99,9 @@ void loop() {
   //Reading SCD40 data which is every 5 seconds (NEST INSIDE OF SGP41)
   SCD40data scdData;
   if (myTZ.now() - lastReadSCD40 >= 5){
+    // Advance the schedule even when a read fails so a disconnected sensor
+    // does not cause the loop to hammer the I2C bus continuously.
+    lastReadSCD40 = myTZ.now();
     if (scd40Read(scdData)){
       Serial.print("CO2: ");
       Serial.println(scdData.co2);
@@ -106,8 +109,7 @@ void loop() {
       Serial.println(scdData.humidity);
       Serial.print("Temperature: ");
       Serial.println(scdData.temperature);
-      lastReadSCD40 = myTZ.now();
-      latestHumidty = scdData.humidity;
+      latestHumidity = scdData.humidity;
       latestTemp = scdData.temperature;
       //Add into arrays
       co2Data.push_back(scdData.co2);
@@ -119,19 +121,21 @@ void loop() {
   //Reading SGP41 data which is every 1 second
   SGP41data sgpdata;
   if (myTZ.now() - lastReadSGP41 >= 1){
-    if(sgpRead(sgpdata, latestTemp, latestHumidty)){
+    // The gas index algorithms expect a 1 Hz cadence. Avoid rapid retries on
+    // failures, which would otherwise feed the algorithm too frequently.
+    lastReadSGP41 = myTZ.now();
+    if(sgpRead(sgpdata, latestTemp, latestHumidity)){
       Serial.print("Nox Index: ");
       Serial.println(sgpdata.no2Index);
       Serial.print("Voc Index: ");
       Serial.println(sgpdata.vocIndex);
-      lastReadSGP41 = myTZ.now();
       //add into arrays
       noxData.push_back(sgpdata.no2Index);
       vocData.push_back(sgpdata.vocIndex);
     }
   }
 
-  //check if 120 seconds have passed before averaging and sendinf to server
+  // Check if 120 seconds have passed before averaging and sending to server.
   if (myTZ.now() - lastAveraged >= uploadInterval){
       //make sure to put in the elements into your lists as you go
       //average and CLEAR the elements as well
@@ -163,7 +167,7 @@ void loop() {
         avgHumid,
         "/readings");
       if (code == 201){
-        Serial.write("120s reading sent successfully");
+        Serial.println("120s reading sent successfully");
         lastAveraged = myTZ.now();
         PMS1_0Data.clear();
         PMS2_5Data.clear();
@@ -175,7 +179,7 @@ void loop() {
         humidData.clear();
       }
       else{
-        Serial.write("120s reading set unsuccessfully");
+        Serial.println("120s reading sent unsuccessfully");
       }
       lastAveraged = myTZ.now();
 

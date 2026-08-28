@@ -101,35 +101,36 @@ Current endpoints include:
 - `POST /readings`
 - `GET /readings`
 
-## Data Collection Plan
+## Data Collection
 
-The firmware is intended to preserve each sensor's required sampling frequency
-while reducing transmission frequency. Valid samples will be accumulated over a
-120-s window, averaged, and transmitted as one representative record every
-2 min. Measurement aggregation and ESP32 HTTP uploads are planned work and are
-not yet implemented in the current firmware.
+The firmware preserves each sensor's required sampling frequency while reducing
+transmission frequency. Valid samples are accumulated over a 120-s window,
+averaged, and sent to the FastAPI server as one representative record every
+2 min. Samples are cleared after a successful upload and retained for the next
+attempt if the upload fails.
 
 ## Prototype Status
 
-As of July 26, 2026:
+As of August 27, 2026:
 
 - C++ drivers exist for all three sensors.
 - The SCD40 is detected at `0x62`.
 - The SGP41 is not detected at `0x59`; replacement hardware is pending.
 - The PMS5003 currently reports zero-valued particulate measurements and
   requires additional frame, checksum, power, and fan validation.
-- A simple FastAPI JSON template is implemented.
+- Two-minute aggregation and ESP32 HTTP uploads are implemented.
+- A simple FastAPI JSON API is implemented with in-memory storage.
 - PostgreSQL persistence and authentication remain planned work.
-- End-to-end ESP32 uploads and the iOS application remain planned work.
+- Hardware validation of end-to-end uploads and the iOS application remain
+  planned work.
 
 ## Planned Work
 
 1. Validate the replacement SGP41 module.
 2. Diagnose the PMS5003 zero-valued measurements.
-3. Add CRC, checksum, and sensor-error validation.
-4. Implement 120-s measurement aggregation.
-5. Define the JSON payload accepted by FastAPI.
-6. Implement ESP32 HTTP uploads.
-7. Add PostgreSQL persistence and authentication.
-8. Validate end-to-end storage and retrieval.
-9. Develop the initial iOS visualization interface.
+3. Add the remaining CRC and checksum validation to the PMS5003 and SCD40
+   drivers.
+4. Validate end-to-end storage and retrieval on hardware.
+5. Add automated firmware and API tests.
+6. Add PostgreSQL persistence and authentication.
+7. Develop the initial iOS visualization interface.
