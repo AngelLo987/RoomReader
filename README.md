@@ -119,7 +119,7 @@ As of September 3, 2026:
 
 - C++ drivers exist for all three sensors.
 - The SCD40 is detected at `0x62`.
-- The SGP41 is not detected at `0x59`; replacement hardware is pending.
+- Replacement SGP41 hardware has been installed; on-device validation remains.
 - PMS5003 frame structure, sensor status, and checksum validation are
   implemented, but the sensor still reports zero-valued particulate
   measurements and requires power, fan, and hardware validation.
@@ -132,13 +132,18 @@ As of September 3, 2026:
 
 ## Planned Work
 
-1. Validate the replacement SGP41 module.
-2. Diagnose the PMS5003 zero-valued measurements.
-3. Replace growing sample vectors with fixed-memory accumulators and sample
-   counts.
-4. Add Wi-Fi reconnection, bounded startup waits, and upload retry behavior.
-5. Add API-key authentication.
-6. Validate end-to-end storage and retrieval on hardware.
-7. Add automated firmware and API tests.
-8. Add persistent database storage.
+1. Validate the installed SGP41 and diagnose the PMS5003 zero-valued readings
+   on hardware.
+2. Add the SGP41 conditioning period and clamp its temperature and humidity
+   compensation inputs.
+3. Replace growing sample vectors with fixed-memory accumulators and include
+   valid-sample counts in uploads.
+4. Add API-key authentication between each RoomReader device and the server.
+5. Add Wi-Fi reconnection, bounded Wi-Fi and NTP startup waits, pending-reading
+   preservation, and upload retry backoff.
+6. Add persistent database storage, followed by pagination and device-status
+   endpoints.
+7. Validate end-to-end collection, upload, and retrieval on hardware.
+8. Add parser, aggregation, API, and authentication tests; run them in CI and
+   include a simulated-reading script.
 9. Develop the initial iOS visualization interface.
