@@ -38,7 +38,9 @@ iOS Application (planned)
 
 The SCD40 humidity and temperature measurements are supplied to the SGP41 for
 on-sensor humidity compensation. The SGP41 Gas Index Algorithm is processed at
-1 Hz, while the SCD40 is sampled every 5 s.
+1 Hz, while the SCD40 is sampled every 5 s. PMS5003 frames are checked for the
+expected header, length, sensor status, and checksum. SCD40 and SGP41 data words
+are protected with Sensirion CRC-8 validation.
 
 ## Repository Layout
 
@@ -100,6 +102,7 @@ Current endpoints include:
 - `GET /health`
 - `POST /readings`
 - `GET /readings`
+- `GET /readings/latest`
 
 ## Data Collection
 
@@ -107,17 +110,20 @@ The firmware preserves each sensor's required sampling frequency while reducing
 transmission frequency. Valid samples are accumulated over a 120-s window,
 averaged, and sent to the FastAPI server as one representative record every
 2 min. Samples are cleared after a successful upload and retained for the next
-attempt if the upload fails.
+attempt if the upload fails. When a sensor has no valid samples during a window,
+its fields are sent as JSON `null` rather than being reported as zero.
 
 ## Prototype Status
 
-As of August 27, 2026:
+As of September 3, 2026:
 
 - C++ drivers exist for all three sensors.
 - The SCD40 is detected at `0x62`.
 - The SGP41 is not detected at `0x59`; replacement hardware is pending.
-- The PMS5003 currently reports zero-valued particulate measurements and
-  requires additional frame, checksum, power, and fan validation.
+- PMS5003 frame structure, sensor status, and checksum validation are
+  implemented, but the sensor still reports zero-valued particulate
+  measurements and requires power, fan, and hardware validation.
+- SCD40 and SGP41 measurement CRC validation is implemented.
 - Two-minute aggregation and ESP32 HTTP uploads are implemented.
 - A simple FastAPI JSON API is implemented with in-memory storage.
 - PostgreSQL persistence and authentication remain planned work.
@@ -128,9 +134,11 @@ As of August 27, 2026:
 
 1. Validate the replacement SGP41 module.
 2. Diagnose the PMS5003 zero-valued measurements.
-3. Add the remaining CRC and checksum validation to the PMS5003 and SCD40
-   drivers.
-4. Validate end-to-end storage and retrieval on hardware.
-5. Add automated firmware and API tests.
-6. Add PostgreSQL persistence and authentication.
-7. Develop the initial iOS visualization interface.
+3. Replace growing sample vectors with fixed-memory accumulators and sample
+   counts.
+4. Add Wi-Fi reconnection, bounded startup waits, and upload retry behavior.
+5. Add API-key authentication.
+6. Validate end-to-end storage and retrieval on hardware.
+7. Add automated firmware and API tests.
+8. Add persistent database storage.
+9. Develop the initial iOS visualization interface.
