@@ -16,3 +16,4 @@ secrets.h
 
 # Generated files
 *.log
+ESP32C3/RoomReader_Implementation_Checklist.md
