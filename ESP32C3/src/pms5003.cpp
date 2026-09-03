@@ -44,20 +44,15 @@ bool pmsRead(PMSdata &data){
     if (pmsSerial.available() < PMS_FRAME_SIZE){
         return false;
     }
-    uint8_t byte1 = pmsSerial.read();
-    //first byte needs to be equal to 0x42
-    if (byte1 != 0x42){
-        while (pmsSerial.available() > 0){
-            pmsSerial.read();
+    while (pmsSerial.peek() != 0x42 && pmsSerial.available() > 0){
+        pmsSerial.read(); //remove the byte from the buffer
+        if (pmsSerial.available() < PMS_FRAME_SIZE){
+            return false;
         }
-        return false;
     }
-    uint8_t byte2 = pmsSerial.peek();
+    uint8_t byte1 = pmsSerial.read();
     //second byte needs to be equal to 0x4D
-    if (byte2 != 0x4D){
-        while (pmsSerial.available() > 0){
-            pmsSerial.read();
-        }
+    if (pmsSerial.peek() != 0x4D){
         return false;
     }
     //frame is a array is 32 bytes long (32 uint8_t's)
@@ -68,11 +63,40 @@ bool pmsRead(PMSdata &data){
         frame[i] = pmsSerial.read();
     }
 
+    //verify the frame length
+    uint16_t frameLength = combineBytes(frame.data(), 2);
+    if (frameLength != 0x001C) {
+      Serial.println("PMS5003 invalid frame length");
+      return false;
+    }
+
+    //checksum (from bytes 0 to 29) should equal the last two bytes (30 and 31)
+    uint16_t sum = 0;
+    for (int i = 0; i < PMS_FRAME_SIZE - 2; i++){
+        sum += frame[i];
+    }
+    uint16_t expectedChecksum = (static_cast<uint16_t>(frame[30]) << 8) + frame[31];
+    if (sum != expectedChecksum){
+        return false;
+    }
+
+    //check error byte
+    if (frame[29] != 0x00){
+        //hardware failure
+        return false;
+    }
+
+
+
+
     //frame.data() gives the pointer to the frame array
     data.pm1_0 = combineBytes(frame.data(), PM1_0);
     data.pm2_5 = combineBytes(frame.data(), PM2_5);
     data.pm10_0 = combineBytes(frame.data(), PM10_0);
     return true;
+
+
+
 
 }
 

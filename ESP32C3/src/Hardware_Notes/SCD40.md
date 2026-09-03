@@ -11,7 +11,7 @@
 
 3. Relative Humidity (Bytes 6-8)
 6&7: Raw Humidty (High and Low Byte). Will be in ticks, so can convert to % RH by doing (100*Tick)/65535
-8: 
+8: checksum
 
 **FYI: ticks range from 0 to 56,535 for both temp and humidity**
 

@@ -1,4 +1,8 @@
 #pragma once
+#include <string>
+#include <string_view>
+#include <array>
+
 
 constexpr char WIFI_SSID[] = "replace-with-wifi-name";
 constexpr char WIFI_PASSWORD[] = "replace-with-wifi-password";

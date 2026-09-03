@@ -136,7 +136,7 @@ boolean sgpRead(SGP41data &data, float latestTemp, float latestHumidty){
     data.srawVoc = srawVoc;
     data.srawNox = srawNox;
     data.vocIndex = vocIndex(srawVoc);
-    data.no2Index = noxIndex(srawNox);
+    data.noxIndex = noxIndex(srawNox);
 
     if (debugSgp41) {
         Serial.print("SGP41 raw VOC: ");
@@ -146,7 +146,7 @@ boolean sgpRead(SGP41data &data, float latestTemp, float latestHumidty){
         Serial.print(" VOC index: ");
         Serial.print(data.vocIndex);
         Serial.print(" NOx index: ");
-        Serial.print(data.no2Index);
+        Serial.print(data.noxIndex);
         Serial.print(" T/H comp: ");
         Serial.print(latestTemp);
         Serial.print("C ");

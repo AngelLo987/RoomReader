@@ -95,6 +95,9 @@ void loop() {
     PMS2_5Data.push_back(pmsData.pm2_5);
     PMS10_0Data.push_back(pmsData.pm10_0);
   }
+  else{
+    Serial.println("PMS5003 read failed");
+  }
 
   //Reading SCD40 data which is every 5 seconds (NEST INSIDE OF SGP41)
   SCD40data scdData;
@@ -116,6 +119,9 @@ void loop() {
       tempData.push_back(scdData.temperature);
       humidData.push_back(scdData.humidity);
     }
+    else{
+      Serial.println("SCD40 read failed");
+    }
 
   }
   //Reading SGP41 data which is every 1 second
@@ -126,12 +132,15 @@ void loop() {
     lastReadSGP41 = myTZ.now();
     if(sgpRead(sgpdata, latestTemp, latestHumidity)){
       Serial.print("Nox Index: ");
-      Serial.println(sgpdata.no2Index);
+      Serial.println(sgpdata.noxIndex);
       Serial.print("Voc Index: ");
       Serial.println(sgpdata.vocIndex);
       //add into arrays
-      noxData.push_back(sgpdata.no2Index);
+      noxData.push_back(sgpdata.noxIndex);
       vocData.push_back(sgpdata.vocIndex);
+    }
+    else {
+      Serial.println("SGP41 read failed");
     }
   }
 
@@ -142,29 +151,45 @@ void loop() {
       //reset the lastAveraged variable
       // SEND THE PACKET to server
 
-      double avgPMS1_0 = getAverage(PMS1_0Data);
-      double avgPMS2_5 = getAverage(PMS2_5Data);
-      double avgPMS10_0 = getAverage(PMS10_0Data);
+      double avgPMS1_0 = 0.0;
+      double avgPMS2_5 = 0.0;
+      double avgPMS10_0 = 0.0;
+      bool hasPMS1_0 = getAverage(PMS1_0Data, avgPMS1_0);
+      bool hasPMS2_5 = getAverage(PMS2_5Data, avgPMS2_5);
+      bool hasPMS10_0 = getAverage(PMS10_0Data, avgPMS10_0);
 
-      double avgNOX = getAverage(noxData);
-      double avgVOC = getAverage(vocData);
+      double avgNOX = 0.0;
+      double avgVOC = 0.0;
+      bool hasNOX = getAverage(noxData, avgNOX);
+      bool hasVOC = getAverage(vocData, avgVOC);
 
-      double avgCO2 = getAverage(co2Data);
-      double avgTemp = getAverage(tempData);
-      double avgHumid = getAverage(humidData);
+      double avgCO2 = 0.0;
+      double avgTemp = 0.0;
+      double avgHumid = 0.0;
+      bool hasCO2 = getAverage(co2Data, avgCO2);
+      bool hasTemp = getAverage(tempData, avgTemp);
+      bool hasHumid = getAverage(humidData, avgHumid);
 
       time_t recordedAt = time(nullptr);
       int code = sendReading(
         deviceid,
         recordedAt,
         avgPMS1_0,
+        hasPMS1_0,
         avgPMS2_5,
+        hasPMS2_5,
         avgPMS10_0,
+        hasPMS10_0,
         avgNOX,
+        hasNOX,
         avgVOC,
+        hasVOC,
         avgCO2,
+        hasCO2,
         avgTemp,
+        hasTemp,
         avgHumid,
+        hasHumid,
         "/readings");
       if (code == 201){
         Serial.println("120s reading sent successfully");
