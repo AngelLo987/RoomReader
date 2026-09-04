@@ -1,7 +1,33 @@
 #pragma once
 
 #include <vector>
+#include <stdint.h>
 #include <time.h>
+
+struct ReadingValue {
+    ReadingValue(double readingValue = 0.0, bool isAvailable = false)
+        : value(readingValue), available(isAvailable) {}
+
+    double value;
+    bool available;
+};
+
+// One complete two-minute reading. Keeping the data together makes readings
+// easy to pass to the uploader and retain for a later retry.
+struct Reading {
+    const char* deviceId = nullptr;
+    time_t recordedAt = 0;
+    ReadingValue pm1_0;
+    ReadingValue pm2_5;
+    ReadingValue pm10_0;
+    ReadingValue noxIndex;
+    ReadingValue vocIndex;
+    ReadingValue co2;
+    ReadingValue temperature;
+    ReadingValue humidity;
+    int32_t wifiRssi = 0;
+    uint32_t uptimeSeconds = 0;
+};
 
 template <typename T>
 bool getAverage(const std::vector<T>& values, double& average) {
@@ -19,24 +45,4 @@ bool getAverage(const std::vector<T>& values, double& average) {
     return true;
 }
 
-int sendReading(
-    const char* device_id,
-    time_t recorded_at,
-    double avgPMS1_0,
-    bool hasPMS1_0,
-    double avgPMS2_5,
-    bool hasPMS2_5,
-    double avgPMS10_0,
-    bool hasPMS10_0,
-    double avgNOX,
-    bool hasNOX,
-    double avgVOC,
-    bool hasVOC,
-    double avgCO2,
-    bool hasCO2,
-    double avgTemp,
-    bool hasTemp,
-    double avgHumid,
-    bool hasHumid,
-    const char* endpoint
-);
+int sendReading(const Reading& reading, const char* endpoint);

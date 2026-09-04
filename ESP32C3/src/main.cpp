@@ -13,6 +13,10 @@ Timezone myTZ;
 
 //Arrays needed to keep track of values to average over 120 seconds
 constexpr int uploadInterval = 120; // 120 seconds
+constexpr size_t maxPendingReadings = 30; // One hour at the current interval.
+Reading pendingReadings[maxPendingReadings];
+size_t pendingReadingsStart = 0;
+size_t pendingReadingsCount = 0;
   //PMS5003//
 std::vector<uint16_t> PMS1_0Data;
 std::vector<uint16_t> PMS2_5Data;
@@ -37,6 +41,36 @@ time_t lastReadSCD40;
 time_t lastReadSGP41;
 //Wifi and ezTime data
 constexpr char location[] = "America/Los_Angeles";
+
+void queueReading(const Reading& reading) {
+  if (pendingReadingsCount == maxPendingReadings) {
+    Serial.println("Pending queue full; discarding oldest reading");
+    pendingReadingsStart = (pendingReadingsStart + 1) % maxPendingReadings;
+    pendingReadingsCount--;
+  }
+
+  size_t nextIndex =
+    (pendingReadingsStart + pendingReadingsCount) % maxPendingReadings;
+  pendingReadings[nextIndex] = reading;
+  pendingReadingsCount++;
+}
+
+void sendPendingReadings() {
+  while (pendingReadingsCount > 0) {
+    int code = sendReading(pendingReadings[pendingReadingsStart], "/readings");
+    if (code != 201) {
+      Serial.printf(
+        "Upload failed; %u reading(s) waiting for retry\n",
+        static_cast<unsigned int>(pendingReadingsCount)
+      );
+      return;
+    }
+
+    pendingReadingsStart = (pendingReadingsStart + 1) % maxPendingReadings;
+    pendingReadingsCount--;
+    Serial.println("Queued reading sent successfully");
+  }
+}
 
 
 
@@ -170,44 +204,32 @@ void loop() {
       bool hasTemp = getAverage(tempData, avgTemp);
       bool hasHumid = getAverage(humidData, avgHumid);
 
-      time_t recordedAt = time(nullptr);
-      int code = sendReading(
-        deviceid,
-        recordedAt,
-        avgPMS1_0,
-        hasPMS1_0,
-        avgPMS2_5,
-        hasPMS2_5,
-        avgPMS10_0,
-        hasPMS10_0,
-        avgNOX,
-        hasNOX,
-        avgVOC,
-        hasVOC,
-        avgCO2,
-        hasCO2,
-        avgTemp,
-        hasTemp,
-        avgHumid,
-        hasHumid,
-        "/readings");
-      if (code == 201){
-        Serial.println("120s reading sent successfully");
-        lastAveraged = myTZ.now();
-        PMS1_0Data.clear();
-        PMS2_5Data.clear();
-        PMS10_0Data.clear();
-        noxData.clear();
-        vocData.clear();
-        co2Data.clear();
-        tempData.clear();
-        humidData.clear();
-      }
-      else{
-        Serial.println("120s reading sent unsuccessfully");
-      }
-      lastAveraged = myTZ.now();
+      Reading reading;
+      reading.deviceId = deviceid;
+      reading.recordedAt = time(nullptr);
+      reading.pm1_0 = {avgPMS1_0, hasPMS1_0};
+      reading.pm2_5 = {avgPMS2_5, hasPMS2_5};
+      reading.pm10_0 = {avgPMS10_0, hasPMS10_0};
+      reading.noxIndex = {avgNOX, hasNOX};
+      reading.vocIndex = {avgVOC, hasVOC};
+      reading.co2 = {avgCO2, hasCO2};
+      reading.temperature = {avgTemp, hasTemp};
+      reading.humidity = {avgHumid, hasHumid};
+      reading.wifiRssi = WiFi.RSSI();
+      reading.uptimeSeconds = millis() / 1000;
 
+      queueReading(reading);
+      sendPendingReadings();
+
+      lastAveraged = myTZ.now();
+      PMS1_0Data.clear();
+      PMS2_5Data.clear();
+      PMS10_0Data.clear();
+      noxData.clear();
+      vocData.clear();
+      co2Data.clear();
+      tempData.clear();
+      humidData.clear();
   }
 
 }

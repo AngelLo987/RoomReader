@@ -9,27 +9,7 @@
 
 constexpr char firmwareVersion[] = "0.1.0";
 
-int sendReading(
-    const char* device_id,
-    time_t recorded_at,
-    double avgPMS1_0,
-    bool hasPMS1_0,
-    double avgPMS2_5,
-    bool hasPMS2_5,
-    double avgPMS10_0,
-    bool hasPMS10_0,
-    double avgNOX,
-    bool hasNOX,
-    double avgVOC,
-    bool hasVOC,
-    double avgCO2,
-    bool hasCO2,
-    double avgTemp,
-    bool hasTemp,
-    double avgHumid,
-    bool hasHumid,
-    const char* endpoint
-) {
+int sendReading(const Reading& reading, const char* endpoint) {
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("Reading upload skipped: Wi-Fi is disconnected");
         return -1;
@@ -37,7 +17,7 @@ int sendReading(
 
     String fullURL = String(baseURL) + endpoint;
     struct tm utcTime;
-    gmtime_r(&recorded_at, &utcTime);
+    gmtime_r(&reading.recordedAt, &utcTime);
 
     char recordedAtText[25];
 
@@ -49,52 +29,52 @@ int sendReading(
     );
 
     JsonDocument json;
-    json["device_id"] = device_id;
+    json["device_id"] = reading.deviceId;
     json["recorded_at"] = recordedAtText;
 
-    if (hasPMS1_0) {
-        json["pm1_0"] = avgPMS1_0;
+    if (reading.pm1_0.available) {
+        json["pm1_0"] = reading.pm1_0.value;
     } else {
         json["pm1_0"] = nullptr;
     }
-    if (hasPMS2_5) {
-        json["pm2_5"] = avgPMS2_5;
+    if (reading.pm2_5.available) {
+        json["pm2_5"] = reading.pm2_5.value;
     } else {
         json["pm2_5"] = nullptr;
     }
-    if (hasPMS10_0) {
-        json["pm10_0"] = avgPMS10_0;
+    if (reading.pm10_0.available) {
+        json["pm10_0"] = reading.pm10_0.value;
     } else {
         json["pm10_0"] = nullptr;
     }
-    if (hasCO2) {
-        json["co2"] = std::lround(avgCO2);
+    if (reading.co2.available) {
+        json["co2"] = std::lround(reading.co2.value);
     } else {
         json["co2"] = nullptr;
     }
-    if (hasTemp) {
-        json["temp_c"] = avgTemp;
+    if (reading.temperature.available) {
+        json["temp_c"] = reading.temperature.value;
     } else {
         json["temp_c"] = nullptr;
     }
-    if (hasHumid) {
-        json["rh_percent"] = avgHumid;
+    if (reading.humidity.available) {
+        json["rh_percent"] = reading.humidity.value;
     } else {
         json["rh_percent"] = nullptr;
     }
-    if (hasVOC) {
-        json["voc_index"] = std::lround(avgVOC);
+    if (reading.vocIndex.available) {
+        json["voc_index"] = std::lround(reading.vocIndex.value);
     } else {
         json["voc_index"] = nullptr;
     }
-    if (hasNOX) {
-        json["nox_index"] = std::lround(avgNOX);
+    if (reading.noxIndex.available) {
+        json["nox_index"] = std::lround(reading.noxIndex.value);
     } else {
         json["nox_index"] = nullptr;
     }
 
-    json["wifi_rssi"] = WiFi.RSSI();
-    json["uptime_seconds"] = millis() / 1000;
+    json["wifi_rssi"] = reading.wifiRssi;
+    json["uptime_seconds"] = reading.uptimeSeconds;
     json["firmware_version"] = firmwareVersion;
 
     String payload;
